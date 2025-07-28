@@ -1,0 +1,27 @@
+
+services:
+  upload:
+    build: ./upload
+    volumes:
+      - ./photos:/app/photos
+    ports:
+      - "8001:80"
+
+  album:
+    build: ./album
+    volumes:
+      - ./photos:/app/photos
+    ports:
+      - "8002:80"
+
+  comment:
+    build: ./comment
+    ports:
+      - "8003:80"
+
+  thumbnail:
+    build: ./function
+    volumes:
+      - ./photos:/app/photos
+      - ./thumbnails:/app/thumbnails
+    restart: always
