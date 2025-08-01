@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Miniatura Generada</title>
+</head>
+<body>
+  <h1>Miniatura Generada</h1>
+  <div id="contenedor"></div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const filename = params.get('file');
+
+    if (filename) {
+      const img = document.createElement('img');
+      img.src = `http://localhost:8001/thumbnails/${filename}`;
+      img.alt = 'Miniatura generada';
+      img.className = 'thumbnail';
+      img.style.border = '2px solid black';
+      img.style.maxWidth = '200px';
+      document.getElementById('contenedor').appendChild(img);
+    } else {
+      document.getElementById('contenedor').textContent = 'No se proporcionó archivo.';
+    }
+  </script>
+</body>
+</html>

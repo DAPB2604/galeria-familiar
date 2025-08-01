@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Subir Foto</title>
+</head>
+<body>
+  <h1>Subir Foto</h1>
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" name="foto" id="foto" required /><br /><br />
+    <select name="licencia" required>
+      <option value="">Seleccione una licencia</option>
+      <option value="CC BY">CC BY</option>
+      <option value="CC BY-SA">CC BY-SA</option>
+      <option value="CC BY-NC">CC BY-NC</option>
+    </select><br><br>
+    <button type="submit">Subir</button>
+  </form>
+
+  <div id="resultado"></div>
+
+  <script>
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = document.getElementById('uploadForm');
+      const formData = new FormData(form);
+
+      try {
+        const response = await fetch('http://localhost:8001/fotos', {
+          method: 'POST',
+          headers: {
+            'X-API-KEY': '123456'
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Error ${response.status}: ${errorText}`);
+        }
+
+        const json = await response.json();
+        if (json.ok && json.file) {
+  window.location.href = `mostrar.html?file=${json.file}`;
+}
+
+      } catch (err) {
+        document.getElementById('resultado').textContent = 'Error en fetch: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
