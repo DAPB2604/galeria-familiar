@@ -1,5 +1,10 @@
 {
+  "name": "galeria-familiar-tests",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "cypress run --headless"
+  },
   "devDependencies": {
-    "cypress": "^14.5.3"
+    "cypress": "^12.0.0"
   }
 }

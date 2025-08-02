@@ -1,48 +1,44 @@
 <?php
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_WARNING);
-require 'vendor/autoload.php';
+require __DIR__ . '/vendor/autoload.php';
 
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
-
-$configuration = [
-    'settings' => [
-        'displayErrorDetails' => true,
-    ],
-];
-
-$app = new \Slim\App($configuration);
-$container = $app->getContainer();
-
-$container['errorHandler'] = function ($c) {
-    return function (Request $request, Response $response, Exception $exception) use ($c) {
-        $body = "Error: " . $exception->getMessage() . "\n\n" . $exception->getTraceAsString();
-        $response->getBody()->write($body);
-        return $response->withStatus(500)->withHeader('Content-Type', 'text/plain');
-    };
-};
+use Slim\Factory\AppFactory;
+use Slim\Exception\HttpInternalServerErrorException;
 
 $apiKey = "123456";
 
-$app->add(function (Request $request, Response $response, callable $next) use ($apiKey) {
+// Crear app Slim 4
+$app = AppFactory::create();
+
+// Middleware para manejo de errores (global)
+$errorMiddleware = $app->addErrorMiddleware(true, true, true);
+
+// Middleware para autenticación API Key
+$app->add(function (Request $request, $handler) use ($apiKey) {
     $path = $request->getUri()->getPath();
     if ($path === '/') {
-        return $next($request, $response);
+        return $handler->handle($request);
     }
+
     $headerKey = $request->getHeaderLine('X-API-KEY');
     if ($headerKey !== $apiKey) {
-        $data = json_encode(["error" => "Unauthorized"]);
-        $response->getBody()->write($data);
+        $response = new \Slim\Psr7\Response();
+        $data = ["error" => "Unauthorized"];
+        $response->getBody()->write(json_encode($data));
         return $response->withStatus(401)->withHeader('Content-Type', 'application/json');
     }
-    return $next($request, $response);
+    return $handler->handle($request);
 });
 
+// Ruta raíz pública
 $app->get('/', function (Request $req, Response $res) {
     $res->getBody()->write(json_encode(["status" => "API funcionando"]));
     return $res->withHeader('Content-Type', 'application/json');
 });
 
+// Ruta POST para comentarios
 $app->post('/comentarios', function (Request $req, Response $res) {
     $body = $req->getBody()->getContents();
     $data = json_decode($body, true);
@@ -53,7 +49,12 @@ $app->post('/comentarios', function (Request $req, Response $res) {
     }
 
     $linea = date("Y-m-d H:i:s") . " | " . $data['img'] . " | " . $data['comentario'] . PHP_EOL;
-    file_put_contents("comentarios.txt", $linea, FILE_APPEND);
+    $file = __DIR__ . "/comentarios.txt";
+
+    // Intentar escribir en el archivo, si falla lanzar excepción
+    if (false === file_put_contents($file, $linea, FILE_APPEND | LOCK_EX)) {
+        throw new HttpInternalServerErrorException($req, "No se pudo guardar el comentario");
+    }
 
     $res->getBody()->write(json_encode(["ok" => true]));
     return $res->withHeader('Content-Type', 'application/json');

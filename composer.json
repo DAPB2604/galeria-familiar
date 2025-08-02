@@ -1,0 +1,12 @@
+{
+  "require": {
+    "slim/slim": "^4.0",
+    "slim/psr7": "^1.7",
+    "php-di/php-di": "^7.0"
+  },
+  "scripts": {
+    "start": "docker-compose up -d",
+    "stop": "docker-compose down",
+    "test": "npm run start && cd tests && npm install && npx cypress run --headless && npm run stop"
+  }
+}

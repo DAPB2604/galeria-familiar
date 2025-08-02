@@ -1,75 +1,63 @@
 <?php
-error_reporting(E_ALL & ~E_DEPRECATED & ~E_WARNING);
-require 'vendor/autoload.php';
+declare(strict_types=1);
 
+use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use Psr\Http\Server\RequestHandlerInterface as Handler;
-use Slim\Psr7\Response;
-$app = new \Slim\App();
+use Psr\Http\Server\RequestHandlerInterface;
+use Slim\Factory\AppFactory;
+use Slim\Psr7\UploadedFile;
+
+require __DIR__ . '/vendor/autoload.php';
+
+$app = AppFactory::create();
 
 $apiKey = "123456"; // tu token estático
 
-// Middleware para CORS y autenticación
-$app->add(function ($request, $response, $next) use ($apiKey) {
-    // Responder rápido a OPTIONS (preflight)
-    if ($request->getMethod() === 'OPTIONS') {
-        return $response
-            ->withHeader('Access-Control-Allow-Origin', 'http://localhost:8080')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization, X-API-KEY')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-            ->withStatus(200);
-    }
-
-    // Para otras peticiones, verificar API Key salvo para ruta '/'
+// Middleware autenticación, exceptuando la ruta '/'
+$app->add(function (Request $request, RequestHandlerInterface $handler) use ($apiKey) {
     $path = $request->getUri()->getPath();
-    if ($path !== '/') {
-        $headerKey = $request->getHeaderLine('X-API-KEY');
-        if ($headerKey !== $apiKey) {
-            $data = json_encode(["error" => "Unauthorized"]);
-            $response->getBody()->write($data);
-            return $response
-                ->withStatus(401)
-                ->withHeader('Content-Type', 'application/json')
-                ->withHeader('Access-Control-Allow-Origin', 'http://localhost:8080')
-                ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization, X-API-KEY')
-                ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        }
+
+    if ($path === '/') {
+        // Ruta pública, no requiere API Key
+        return $handler->handle($request);
     }
 
-    // Continuar con el siguiente middleware/ruta
-    $response = $next($request, $response);
+    $headerKey = $request->getHeaderLine('X-API-KEY');
+    if ($headerKey !== $apiKey) {
+        $response = new \Slim\Psr7\Response();
+        $response->getBody()->write(json_encode(["error" => "Unauthorized"]));
+        return $response->withStatus(401)->withHeader('Content-Type', 'application/json');
+    }
 
-    // Agregar headers CORS a todas las respuestas
-    return $response
-        ->withHeader('Access-Control-Allow-Origin', 'http://localhost:8080')
-        ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization, X-API-KEY')
-        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    return $handler->handle($request);
 });
 
-
-// Ruta pública para verificar API
-$app->get('/', function ($req, $res) {
-    $res->getBody()->write(json_encode(["status" => "API funcionando"]));
-    return $res->withHeader('Content-Type', 'application/json');
+// Ruta pública para comprobar que la API funciona
+$app->get('/', function (Request $request, Response $response) {
+    $response->getBody()->write(json_encode(["status" => "API funcionando"]));
+    return $response->withHeader('Content-Type', 'application/json');
 });
 
-// Ruta POST para subir imagen
-$app->post('/fotos', function ($req, $res) {
-    $uploadedFiles = $req->getUploadedFiles();
+// Ruta POST para subir fotos
+$app->post('/fotos', function (Request $request, Response $response) {
+    $directory = __DIR__ . '/photos';
+    if (!is_dir($directory)) {
+        mkdir($directory, 0755, true);
+    }
+
+    $uploadedFiles = $request->getUploadedFiles();
     $foto = $uploadedFiles['foto'] ?? null;
 
-    if ($foto && $foto->getError() === UPLOAD_ERR_OK) {
+    if ($foto instanceof UploadedFile && $foto->getError() === UPLOAD_ERR_OK) {
         $filename = $foto->getClientFilename();
-        $foto->moveTo("photos/$filename");
-        return $res->withJson([
-            "ok" => true,
-            "file" => $filename,
-            "path" => "photos/$filename"
-        ]);
+        $foto->moveTo($directory . DIRECTORY_SEPARATOR . $filename);
+
+        $response->getBody()->write(json_encode(["ok" => true, "file" => $filename]));
+        return $response->withHeader('Content-Type', 'application/json');
     }
 
-    return $res->withStatus(400)->write("Error al subir imagen");
+    $response->getBody()->write(json_encode(["error" => "Error al subir imagen"]));
+    return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
 });
 
 $app->run();
-

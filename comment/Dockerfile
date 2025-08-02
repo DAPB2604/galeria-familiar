@@ -1,7 +1,16 @@
 FROM php:8.2-cli
+
 WORKDIR /app
+
+COPY composer.json ./
+
+RUN apt-get update && apt-get install -y unzip curl git \
+    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+    && composer install --no-dev --optimize-autoloader
+
 COPY . .
-RUN apt-get update && apt-get install -y unzip curl && \
-    curl -sS https://getcomposer.org/installer | php && \
-    php composer.phar require slim/slim:"^3.0"
-CMD ["php", "-S", "0.0.0.0:80", "index.php"]
+
+# Puerto 80 para el servidor PHP embebido
+EXPOSE 80
+
+CMD ["php", "-S", "0.0.0.0:80", "-t", "/app", "index.php"]
