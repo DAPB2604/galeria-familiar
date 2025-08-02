@@ -2,9 +2,12 @@
   "name": "galeria-familiar-tests",
   "version": "1.0.0",
   "scripts": {
-    "test": "cypress run --headless"
+    "start": "docker-compose -f ../docker-compose.yml up -d",
+    "stop": "docker-compose -f ../docker-compose.yml down",
+    "test:e2e": "npm run start && npx wait-on http://localhost:8080 && cypress run --headless && npm run stop"
   },
   "devDependencies": {
-    "cypress": "^12.0.0"
+    "cypress": "^12.0.0",
+    "wait-on": "^7.2.0"
   }
 }

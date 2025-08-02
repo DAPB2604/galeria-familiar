@@ -11,14 +11,33 @@ require __DIR__ . '/vendor/autoload.php';
 
 $app = AppFactory::create();
 
-$apiKey = "123456"; // tu token estático
+$apiKey = "123456"; // Token estático
 
-// Middleware autenticación, exceptuando la ruta '/'
+// Middleware CORS
+$app->add(function (Request $request, RequestHandlerInterface $handler): Response {
+    $response = $handler->handle($request);
+
+    // CORS headers
+    $origin = $request->getHeaderLine('Origin') ?: '*';
+
+    return $response
+        ->withHeader('Access-Control-Allow-Origin', $origin)
+        ->withHeader('Access-Control-Allow-Credentials', 'true')
+        ->withHeader('Access-Control-Allow-Headers', 'X-API-KEY, Content-Type, Accept, Origin, Authorization')
+        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+});
+
+// Responder OPTIONS inmediatamente (antes de cualquier autenticación)
+$app->options('/{routes:.+}', function (Request $request, Response $response) {
+    return $response;
+});
+
+// Middleware de autenticación (excepto para '/')
 $app->add(function (Request $request, RequestHandlerInterface $handler) use ($apiKey) {
     $path = $request->getUri()->getPath();
 
-    if ($path === '/') {
-        // Ruta pública, no requiere API Key
+    // Permitir "/" y OPTIONS sin autenticación
+    if ($path === '/' || $request->getMethod() === 'OPTIONS') {
         return $handler->handle($request);
     }
 
@@ -32,13 +51,13 @@ $app->add(function (Request $request, RequestHandlerInterface $handler) use ($ap
     return $handler->handle($request);
 });
 
-// Ruta pública para comprobar que la API funciona
+// Ruta pública para verificar el estado
 $app->get('/', function (Request $request, Response $response) {
     $response->getBody()->write(json_encode(["status" => "API funcionando"]));
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-// Ruta POST para subir fotos
+// Ruta para subir imágenes
 $app->post('/fotos', function (Request $request, Response $response) {
     $directory = __DIR__ . '/photos';
     if (!is_dir($directory)) {
