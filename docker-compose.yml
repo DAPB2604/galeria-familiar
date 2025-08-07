@@ -1,3 +1,4 @@
+version: '3.8'
 
 services:
   upload:
@@ -6,6 +7,8 @@ services:
       - ./photos:/app/photos
     ports:
       - "8001:80"
+    networks:
+      - zabbix-net
 
   album:
     build: ./album
@@ -13,11 +16,15 @@ services:
       - ./photos:/app/photos
     ports:
       - "8002:80"
+    networks:
+      - zabbix-net
 
   comment:
     build: ./comment
     ports:
       - "8003:80"
+    networks:
+      - zabbix-net
 
   thumbnail:
     build: ./function
@@ -25,3 +32,20 @@ services:
       - ./photos:/app/photos
       - ./thumbnails:/app/thumbnails
     restart: always
+    networks:
+      - zabbix-net
+
+  zabbix-agent:
+    image: zabbix/zabbix-agent:alpine-6.4-latest
+    container_name: gallery_zabbix_agent
+    environment:
+      - ZBX_SERVER_HOST=zabbix
+      - ZBX_HOSTNAME=gallery-host
+    ports:
+      - "10050:10050"
+    networks:
+      - zabbix-net
+
+networks:
+  zabbix-net:
+    external: true

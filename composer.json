@@ -8,5 +8,9 @@
     "start": "docker-compose up -d",
     "stop": "docker-compose down",
     "test": "npm run start && cd tests && npm install && npx cypress run --headless && npm run stop"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.5",
+    "guzzlehttp/guzzle": "^7.9"
   }
 }

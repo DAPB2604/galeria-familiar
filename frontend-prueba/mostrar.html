@@ -19,6 +19,11 @@
       img.className = 'thumbnail';
       img.style.border = '2px solid black';
       img.style.maxWidth = '200px';
+
+      img.onerror = () => {
+        document.getElementById('contenedor').textContent = 'Miniatura no disponible aún.';
+      };
+
       document.getElementById('contenedor').appendChild(img);
     } else {
       document.getElementById('contenedor').textContent = 'No se proporcionó archivo.';

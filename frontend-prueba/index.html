@@ -41,8 +41,8 @@
 
         const json = await response.json();
         if (json.ok && json.file) {
-  window.location.href = `mostrar.html?file=${json.file}`;
-}
+          window.location.href = `mostrar.html?file=${json.file}`;
+        }
 
       } catch (err) {
         document.getElementById('resultado').textContent = 'Error en fetch: ' + err.message;

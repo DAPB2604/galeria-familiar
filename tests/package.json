@@ -4,10 +4,14 @@
   "scripts": {
     "start": "docker-compose -f ../docker-compose.yml up -d",
     "stop": "docker-compose -f ../docker-compose.yml down",
-    "test:e2e": "npm run start && npx wait-on http://localhost:8080 && cypress run --headless && npm run stop"
+    "test:e2e": "npm run start && npx wait-on http://localhost:8080 && cypress run --headless && npm run stop",
+    "coverage:report": "nyc report --reporter=lcov && nyc report --reporter=text",
+    "test:coverage": "nyc npm run test:e2e && npm run coverage:report"
   },
   "devDependencies": {
     "cypress": "^12.0.0",
-    "wait-on": "^7.2.0"
+    "wait-on": "^7.2.0",
+    "nyc": "^15.1.0"
   }
 }
+

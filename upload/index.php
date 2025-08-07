@@ -11,33 +11,33 @@ require __DIR__ . '/vendor/autoload.php';
 
 $app = AppFactory::create();
 
-$apiKey = "123456"; // Token estático
+$apiKey = "123456"; // Token estático de autenticación
 
-// Middleware CORS
+// Middleware CORS global
 $app->add(function (Request $request, RequestHandlerInterface $handler): Response {
+    if (strtoupper($request->getMethod()) === 'OPTIONS') {
+        // Preflight request, devolver solo las cabeceras CORS
+        return (new \Slim\Psr7\Response())
+            ->withHeader('Access-Control-Allow-Origin', 'http://192.168.0.13:8080')
+            ->withHeader('Access-Control-Allow-Headers', 'X-API-KEY, Content-Type, Accept, Origin, Authorization')
+            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            ->withStatus(204); // No Content
+    }
+
+    // Para todas las demás peticiones
     $response = $handler->handle($request);
-
-    // CORS headers
-    $origin = $request->getHeaderLine('Origin') ?: '*';
-
     return $response
-        ->withHeader('Access-Control-Allow-Origin', $origin)
-        ->withHeader('Access-Control-Allow-Credentials', 'true')
+        ->withHeader('Access-Control-Allow-Origin', 'http://192.168.0.13:8080')
         ->withHeader('Access-Control-Allow-Headers', 'X-API-KEY, Content-Type, Accept, Origin, Authorization')
-        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
 });
 
-// Responder OPTIONS inmediatamente (antes de cualquier autenticación)
-$app->options('/{routes:.+}', function (Request $request, Response $response) {
-    return $response;
-});
-
-// Middleware de autenticación (excepto para '/')
+// Middleware de autenticación
 $app->add(function (Request $request, RequestHandlerInterface $handler) use ($apiKey) {
     $path = $request->getUri()->getPath();
 
-    // Permitir "/" y OPTIONS sin autenticación
-    if ($path === '/' || $request->getMethod() === 'OPTIONS') {
+    // Ruta pública
+    if ($path === '/') {
         return $handler->handle($request);
     }
 
@@ -51,15 +51,15 @@ $app->add(function (Request $request, RequestHandlerInterface $handler) use ($ap
     return $handler->handle($request);
 });
 
-// Ruta pública para verificar el estado
+// Ruta de prueba (GET /)
 $app->get('/', function (Request $request, Response $response) {
     $response->getBody()->write(json_encode(["status" => "API funcionando"]));
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-// Ruta para subir imágenes
+// Ruta para subir imagen (POST /fotos)
 $app->post('/fotos', function (Request $request, Response $response) {
-    $directory = __DIR__ . '/photos';
+    $directory = '/app/photos';;
     if (!is_dir($directory)) {
         mkdir($directory, 0755, true);
     }
